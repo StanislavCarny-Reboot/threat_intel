@@ -1,11 +1,11 @@
-name: Run Main
+name: Run Data Pipeline
 
 on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
-  workflow_dispatch:  # Allows manual triggering
+  # push:
+  #   branches: [ main ]
+  # pull_request:
+  #   branches: [ main ]
+  workflow_dispatch: 
 
 jobs:
   run:
@@ -24,6 +24,12 @@ jobs:
 
     - name: Install dependencies
       run: uv sync
+
+    - name: Install Playwright browsers
+      run: uv run playwright install chromium
+
+    - name: Install Playwright system dependencies
+      run: uv run playwright install-deps chromium
 
     - name: Run main
       run: uv run main.py
