@@ -22,7 +22,7 @@ class LLMRSSFeed(BaseModel):
 class ThreatCampaign(BaseModel):
     id: str = Field(description="Unique identifier for the threat")
     title: str = Field(description="Title of the threat campaign")
-    created_at: str = Field(
+    created_at: datetime = Field(
         description="Creation timestamp in format YYYY-MM-DD HH:MM:SS without timezone"
     )
     source_url: str = Field(

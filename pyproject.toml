@@ -9,6 +9,7 @@ dependencies = [
     "google-genai>=1.59.0",
     "ipython>=9.9.0",
     "loguru>=0.7.3",
+    "mlflow>=3.8.1",
     "playwright>=1.57.0",
     "psycopg2>=2.9.11",
     "pydantic>=2.12.5",

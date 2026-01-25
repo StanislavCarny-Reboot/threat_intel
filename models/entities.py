@@ -4,6 +4,14 @@ from sqlalchemy import Column, Integer, String, Text, DateTime
 from connectors import Base
 
 
+class DataSources(Base):
+    __tablename__ = "data_sources"
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, unique=True, nullable=False)
+    url = Column(String, unique=True, nullable=False)
+    active = Column(String, default="true")
+
+
 class Article(Base):
     __tablename__ = "articles"
     id = Column(Integer, primary_key=True, index=True)
@@ -11,6 +19,7 @@ class Article(Base):
     text = Column(Text, nullable=False)
     url = Column(String, unique=True, nullable=False)
     published_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.utcnow)
 
 
 class RssItem(Base):
@@ -21,3 +30,4 @@ class RssItem(Base):
     url = Column(String, unique=True, nullable=False)
     status = Column(String)
     published_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.utcnow)

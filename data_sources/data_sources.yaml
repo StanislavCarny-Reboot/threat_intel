@@ -1,8 +1,0 @@
-
-rss_feed:
-  - name: "cybersecurity_news"
-    url: "https://cybersecuritynews.com/feed/"
-    type: "rss"
-
-
-
