@@ -45,7 +45,58 @@ source .venv/bin/activate  # On Unix/macOS
 
 ## Architecture
 
-The project is currently minimal with a single entry point:
-- `main.py`: Main application entry point with `main()` function
+### Project Structure
 
-As the project grows, this section should be updated with architecture patterns, module organization, and key components.
+```
+threat_intel/
+├── workflows/          # Main processing workflows
+│   ├── filter_attacks.py    # Article classification using LLM
+│   ├── get_intel.py         # Threat intelligence extraction
+│   ├── get_rss.py           # RSS feed processing
+│   └── get_data.py          # Data collection
+├── evaluations/        # MLflow evaluation system
+│   ├── classify_evaluation.py    # Evaluation runner
+│   ├── create_eval_template.py   # Template generator
+│   ├── example_usage.py          # Usage examples
+│   └── README.md                 # Evaluation documentation
+├── models/             # Data models and schemas
+│   ├── schemas.py      # Pydantic models (ArticleClassification, ThreatCampaign)
+│   └── entities.py     # Database entities
+├── prompts/            # LLM prompts
+│   ├── attack_classification.py
+│   └── rss_extraction.py
+├── connectors/         # External service connectors
+│   └── database.py     # Database connections
+├── utils/              # Utility functions
+└── data/               # Data files (Excel files, evaluation data)
+```
+
+### Key Components
+
+#### Workflows
+- **filter_attacks.py**: Classifies articles using LLM (Gemini) to identify cyber attack campaigns, general news, or CVEs
+  - `classify_article()`: Main classification function
+  - Uses structured output with Pydantic schemas
+  - Async processing with batching and rate limiting
+
+#### Evaluations (MLflow Integration)
+- **classify_evaluation.py**: MLflow-based evaluation system for article classification
+  - Load evaluation data from Excel files
+  - Run evaluations and track metrics (accuracy, per-class performance)
+  - Add evaluation datapoints programmatically or from Excel
+  - Automatic artifact logging and experiment tracking
+
+### Running Evaluations
+
+```bash
+# Create evaluation template
+uv run evaluations/create_eval_template.py
+
+# Run evaluation
+uv run evaluations/classify_evaluation.py --eval-file data/my_evaluation.xlsx
+
+# View results in MLflow UI
+mlflow ui --backend-store-uri mlruns/
+```
+
+See `evaluations/README.md` for detailed documentation.

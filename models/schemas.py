@@ -43,17 +43,12 @@ class ThreatCampaign(BaseModel):
 
 
 class ArticleClassification(BaseModel):
-    classification: Literal[
-        "Cyber Attack Campaign",
-        "General News",
-        "Common Vulnerability and Exposures",
-        "Not Sure",
-    ] = Field(
-        description="Classification of the article: 'Cyber Attack Campaign', 'General News','Common Vulnerability and Exposures or 'Not Sure'"
+    active_campaign: Literal["True", "False", "Not Sure"] = Field(
+        description="Indicates if the article is classified as an 'Active Cyber Attack Campaign'"
     )
-    confidence: Literal["High", "Medium", "Low"] = Field(
-        description="Confidence level: 'High', 'Medium', or 'Low'"
+    cve: Literal["True", "False", "Not Sure"] = Field(
+        description="Indicates if the article is classified as 'Common Vulnerabilities and Exposures (CVE)'"
     )
-    reasoning: str = Field(
-        description="Brief explanation of the reasoning behind the classification"
+    digest: Literal["True", "False", "Not Sure"] = Field(
+        description="Indicates if the article is classified as a 'Digest'"
     )

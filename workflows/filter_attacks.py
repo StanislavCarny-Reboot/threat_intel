@@ -30,14 +30,14 @@ client = genai.Client(api_key=os.getenv("API_KEY"))
 @retry(wait=wait_fixed(2), stop=stop_after_attempt(3))
 async def classify_article(article_text: str, article_url: str) -> dict:
     """
-    Call the LLM to classify an article as a cyber attack campaign or general news.
+    Call the LLM to classify an article across multiple categories.
 
     Args:
         article_text: The text content of the article
         article_url: The URL of the article (for logging)
 
     Returns:
-        dict: Classification result with 'classification', 'confidence', and 'reasoning'
+        dict: Classification result with 'active_campaign', 'cve', and 'digest' fields
     """
     system_instruction = ATTACK_CLASSIFICATION_PROMPT
 
@@ -70,31 +70,33 @@ async def process_article(article_row: dict) -> dict:
         article_row: Dictionary containing article data (ID, Text, URL, etc.)
 
     Returns:
-        dict: Contains article_id and classification data
+        dict: Contains article_id and classification data for all three categories
     """
     try:
         # Call LLM to classify the article
         classification = await classify_article(article_row["Text"], article_row["URL"])
 
         logger.info(
-            f"Article {article_row['ID']} classified as '{classification['classification']}' "
-            f"with {classification['confidence']} confidence"
+            f"Article {article_row['ID']} classified - "
+            f"Active Campaign: {classification['active_campaign']}, "
+            f"CVE: {classification['cve']}, "
+            f"Digest: {classification['digest']}"
         )
 
         return {
             "article_id": article_row["ID"],
-            "classification": classification["classification"],
-            "confidence": classification["confidence"],
-            "reasoning": classification["reasoning"],
+            "active_campaign": classification["active_campaign"],
+            "cve": classification["cve"],
+            "digest": classification["digest"],
         }
 
     except Exception as e:
         logger.error(f"Error processing article {article_row['ID']}: {e}")
         return {
             "article_id": article_row["ID"],
-            "classification": "Error",
-            "confidence": "N/A",
-            "reasoning": "",
+            "active_campaign": "Error",
+            "cve": "Error",
+            "digest": "Error",
         }
 
 
@@ -159,14 +161,14 @@ async def run(input_file: str = None, output_file: str = None):
 
     # Add classification results to DataFrame
     classification_map = {r["article_id"]: r for r in all_results}
-    dff["Classification"] = dff["ID"].map(
-        lambda x: classification_map.get(x, {}).get("classification", "Error")
+    dff["Active Campaign"] = dff["ID"].map(
+        lambda x: classification_map.get(x, {}).get("active_campaign", "Error")
     )
-    dff["Confidence"] = dff["ID"].map(
-        lambda x: classification_map.get(x, {}).get("confidence", "N/A")
+    dff["CVE"] = dff["ID"].map(
+        lambda x: classification_map.get(x, {}).get("cve", "Error")
     )
-    dff["Reasoning"] = dff["ID"].map(
-        lambda x: classification_map.get(x, {}).get("reasoning", "")
+    dff["Digest"] = dff["ID"].map(
+        lambda x: classification_map.get(x, {}).get("digest", "Error")
     )
 
     # Generate output filename if not provided
@@ -201,15 +203,17 @@ async def run(input_file: str = None, output_file: str = None):
             worksheet.column_dimensions[col_letter].width = max_length
 
     # Summary statistics
-    attack_campaigns = sum(
-        1 for r in all_results if r["classification"] == "Cyber Attack Campaign"
+    active_campaigns_true = sum(
+        1 for r in all_results if r.get("active_campaign") == "True"
     )
-    general_news = sum(1 for r in all_results if r["classification"] == "General News")
-    not_sure = sum(1 for r in all_results if r["classification"] == "Not Sure")
+    cve_true = sum(
+        1 for r in all_results if r.get("cve") == "True"
+    )
+    digest_true = sum(1 for r in all_results if r.get("digest") == "True")
 
     logger.info(
-        f"Classification complete: {attack_campaigns} attack campaigns, "
-        f"{general_news} general news, {not_sure} not sure"
+        f"Classification complete: {active_campaigns_true} active campaigns, "
+        f"{cve_true} CVEs, {digest_true} digests (out of {len(all_results)} articles)"
     )
     logger.info(f"Results saved to {output_file}")
 

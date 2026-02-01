@@ -31,3 +31,15 @@ class RssItem(Base):
     status = Column(String)
     published_at = Column(DateTime, default=datetime.utcnow)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class ArticleClassificationLabel(Base):
+    __tablename__ = "article_classification_labels"
+    id = Column(Integer, primary_key=True, index=True)
+    article_id = Column(Integer, nullable=False)
+    url = Column(String, nullable=False)
+    active_campaign = Column(String, nullable=False)
+    cve = Column(String, nullable=False)
+    digest = Column(String, nullable=False)
+    label_source = Column(String, default="manual")  # 'manual', 'llm', 'evaluation'
+    created_at = Column(DateTime, default=datetime.utcnow)

@@ -44,6 +44,8 @@ async def export_articles_to_xlsx(output_file: str | None = None) -> str:
 
     logger.info(f"Found {len(articles)} articles to export")
 
+    pd.DataFrame
+
     # Generate output filename if not provided
     if output_file is None:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -67,19 +69,8 @@ async def export_articles_to_xlsx(output_file: str | None = None) -> str:
             }
         )
 
-    df = pd.DataFrame(data)
-
-    # Export to XLSX with formatting
-    with pd.ExcelWriter(output_file, engine="openpyxl") as writer:
-        df.to_excel(writer, index=False, sheet_name="Articles")
-
-        # Auto-adjust column widths
-        worksheet = writer.sheets["Articles"]
-        for idx, col in enumerate(df.columns):
-            max_length = max(df[col].astype(str).apply(len).max(), len(str(col)))
-            # Limit width to 100 characters
-            max_length = min(max_length + 2, 100)
-            worksheet.column_dimensions[chr(65 + idx)].width = max_length
+    return data
+    pd.DataFrame(data).to_excel(output_file, index=False)
 
     logger.info(f"Successfully exported {len(articles)} articles to {output_file}")
     return output_file
