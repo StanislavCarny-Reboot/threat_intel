@@ -39,14 +39,14 @@ def extract_urls(text: str) -> list[str]:
     return list(urls)
 
 
-async def get_rss_feed(url: str) -> requests.Response | None:
+async def get_rss_feed(url: str) -> requests.Response | int:
     try:
         rss_feed_raw = await asyncio.to_thread(requests.get, url)
         if rss_feed_raw.status_code != 200:
             logger.error(
                 f"Failed to fetch RSS feed from {url}, status code: {rss_feed_raw.status_code} reason: {rss_feed_raw.reason}"
             )
-            return None
+            return rss_feed_raw.status_code
 
         return rss_feed_raw
     except requests.exceptions.RequestException as e:
@@ -99,9 +99,9 @@ async def process_source_atomic(source: DataSources) -> int:
     try:
         # Step 1: Fetch RSS feed
         rss_feed_raw = await get_rss_feed(source.url)
-        if rss_feed_raw is None:
+        if rss_feed_raw != 200:
             logger.warning(f"Skipping source '{source.name}' due to fetch error")
-            return 0
+            return rss_feed_raw
 
         # Step 2: Call LLM to process the feed
         try:

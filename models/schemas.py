@@ -1,5 +1,6 @@
 from pydantic import BaseModel, Field, field_validator
 from datetime import datetime
+from typing import Literal
 
 
 class LLMRssFeedItem(BaseModel):
@@ -38,4 +39,21 @@ class ThreatCampaign(BaseModel):
     mitre_mapping: list[str] = Field(
         default_factory=list,
         description="MITRE ATT&CK techniques associated with the threat campaign",
+    )
+
+
+class ArticleClassification(BaseModel):
+    classification: Literal[
+        "Cyber Attack Campaign",
+        "General News",
+        "Common Vulnerability and Exposures",
+        "Not Sure",
+    ] = Field(
+        description="Classification of the article: 'Cyber Attack Campaign', 'General News','Common Vulnerability and Exposures or 'Not Sure'"
+    )
+    confidence: Literal["High", "Medium", "Low"] = Field(
+        description="Confidence level: 'High', 'Medium', or 'Low'"
+    )
+    reasoning: str = Field(
+        description="Brief explanation of the reasoning behind the classification"
     )
