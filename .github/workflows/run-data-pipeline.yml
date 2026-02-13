@@ -1,0 +1,35 @@
+name: Run Data Pipeline
+
+on:
+  # push:
+  #   branches: [ main ]
+  # pull_request:
+  #   branches: [ main ]
+  workflow_dispatch: 
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v4
+
+    - name: Install dependencies
+      run: uv sync
+
+    - name: Install Playwright browsers
+      run: uv run playwright install chromium
+
+    - name: Install Playwright system dependencies
+      run: uv run playwright install-deps chromium
+
+    - name: Run main
+      run: uv run main.py

@@ -1,0 +1,12 @@
+.env
+.venv
+data/
+__pycache__/
+*.pyc
+.DS_Store
+
+# MLflow
+mlruns/
+mlartifacts/
+
+.local.env
