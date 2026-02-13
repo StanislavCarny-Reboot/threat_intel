@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 interface DataSource {
   id: number;
@@ -149,9 +149,8 @@ export default function Home() {
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {runs.map((run) => (
-                    <>
+                    <React.Fragment key={run.run_id}>
                       <tr
-                        key={run.run_id}
                         onClick={() => toggleExpand(run.run_id)}
                         className="hover:bg-gray-50 cursor-pointer"
                       >
@@ -242,7 +241,7 @@ export default function Home() {
                           </td>
                         </tr>
                       )}
-                    </>
+                    </React.Fragment>
                   ))}
                 </tbody>
               </table>
