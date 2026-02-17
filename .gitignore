@@ -10,3 +10,8 @@ mlruns/
 mlartifacts/
 
 .local.env
+
+# Docker
+*.sql
+docker-compose.override.yml
+outputs/*

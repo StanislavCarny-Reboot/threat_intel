@@ -1,0 +1,38 @@
+# Prefect deployment configuration
+name: threat-intel-backend
+prefect-version: 3.6.17
+
+# Pull step - how to get the code
+pull:
+  - prefect.deployments.steps.git_clone:
+      repository: https://github.com/your-repo/threat-intel.git
+      branch: main
+      # Uncomment if using private repo
+      # access_token: "{{ prefect.blocks.secret.github-token }}"
+
+# Build step - any build commands needed
+build: null
+
+# Push step - where to store the deployment
+push: null
+
+# Deployments configuration
+deployments:
+
+  - name: rss-url-collector
+    tags:
+      - rss
+      - threat-intel
+      - url-collection
+    description: "Collect RSS article URLs published in the last 24 hours"
+    entrypoint: workflows/new_flows/parse_rss.py:run
+    # schedules:
+    #   - cron: "0 * * * *"
+    #     timezone: "UTC"
+    #     active: true
+    parameters:
+      window_hours: 24
+      max_items_per_feed: 100
+      limit_sources: 0
+      dry_run: false
+    enforce_parameter_schema: false

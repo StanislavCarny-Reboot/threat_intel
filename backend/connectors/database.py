@@ -52,12 +52,19 @@ class PostgresConnector:
     """
 
     _instance: Optional["PostgresConnector"] = None
-    _creation_lock = threading.Lock()
+    _creation_lock: Optional[threading.Lock] = None
+
+    @classmethod
+    def _get_lock(cls) -> threading.Lock:
+        """Get or create the creation lock (lazy initialization to avoid pickling issues)"""
+        if cls._creation_lock is None:
+            cls._creation_lock = threading.Lock()
+        return cls._creation_lock
 
     def __init__(self):
         self._engine: Optional[AsyncEngine] = None
         self._session_factory: Optional[async_sessionmaker[AsyncSession]] = None
-        self._engine_lock = asyncio.Lock()
+        self._engine_lock: Optional[asyncio.Lock] = None
         self._initialized = True
 
         # Database configuration from environment variables
@@ -76,6 +83,10 @@ class PostgresConnector:
         Create async engine and session factory.
         This method is idempotent - calling it multiple times is safe.
         """
+        # Lazy initialization of engine lock to avoid pickling issues
+        if self._engine_lock is None:
+            self._engine_lock = asyncio.Lock()
+
         async with self._engine_lock:
             if self._engine is not None:
                 logger.debug("Database engine already exists")
@@ -112,6 +123,10 @@ class PostgresConnector:
         Dispose of the engine and cleanup resources.
         This method is idempotent - calling it multiple times is safe.
         """
+        # Lazy initialization of engine lock to avoid pickling issues
+        if self._engine_lock is None:
+            self._engine_lock = asyncio.Lock()
+
         async with self._engine_lock:
             if self._engine is None:
                 logger.debug("No database engine to dispose")
@@ -256,4 +271,20 @@ class PostgresConnector:
         logger.info("Database tables dropped successfully")
 
 
+# Global singleton instance - safe to pickle now that locks are lazy
 db = PostgresConnector()
+
+
+def get_sync_db_session():
+    """Create a synchronous SQLAlchemy session for use in Prefect tasks."""
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import sessionmaker
+
+    database_url = os.getenv("DATABASE_URL")
+    if not database_url:
+        raise ValueError("DATABASE_URL environment variable is required but not set")
+
+    sync_url = database_url.replace("postgresql+asyncpg://", "postgresql://")
+    engine = create_engine(sync_url, connect_args={"sslmode": "prefer"})
+    Session = sessionmaker(bind=engine)
+    return Session()
