@@ -285,6 +285,11 @@ def get_sync_db_session():
         raise ValueError("DATABASE_URL environment variable is required but not set")
 
     sync_url = database_url.replace("postgresql+asyncpg://", "postgresql://")
-    engine = create_engine(sync_url, connect_args={"sslmode": "prefer"})
+    engine = create_engine(
+        sync_url,
+        connect_args={"sslmode": "prefer", "gssencmode": "disable"},
+        pool_size=2,
+        max_overflow=2,
+    )
     Session = sessionmaker(bind=engine)
     return Session()

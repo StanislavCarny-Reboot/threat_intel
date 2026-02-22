@@ -53,6 +53,19 @@ ATTACK_CLASSIFICATION_PROMPT = """
 * **Principle:** Always be conservative. If it doesn't clearly hit the marks for "True," label it "Not Sure" or "False."
 
 
+## 5. Redirect / Link-Only Article
+Definition: Is this article primarily a pointer to another external post with little or no original content?
+
+Mark TRUE if:
+* **Minimal Content:** Only a very brief summary (e.g., 1–3 short paragraphs) with no meaningful technical or operational detail.
+* **Primary Purpose is Redirection:** The main goal is to send the reader to another blog, report, or external site for the full story.
+* **No Independent Intelligence Value:** The page itself does not provide enough information to assess a campaign or CVE.
+
+Mark FALSE if:
+* **Substantive Analysis:** The article contains substantive analysis or meaningful summaries, even if it includes external links.
+* **Digest Qualification:** It qualifies as a Digest with multiple topics and standalone intelligence value.
+* **Key Distinction:** A Redirect exists mainly to forward the reader elsewhere; a Digest provides meaningful content on its own.
+
 
 ## Required Output Format
 For every article, provide the following:

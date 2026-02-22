@@ -53,7 +53,6 @@ class ArticleClassificationLabel(Base):
     __tablename__ = "article_classification_labels"
     id = Column(Integer, primary_key=True, index=True)
     article_id = Column(Integer, nullable=False)
-    url = Column(String, nullable=False)
     active_campaign = Column(String, nullable=False)
     cve = Column(String, nullable=False)
     digest = Column(String, nullable=False)
@@ -113,5 +112,6 @@ class SourceErrorLog(Base):
     source_url = Column(Text, nullable=False)
     status_code = Column(Text, nullable=False)
     error_message = Column(Text, nullable=True)
+    process = Column(Text, nullable=True)
     detected_at = Column(TIMESTAMP(timezone=True), nullable=False)
     created_at = Column(TIMESTAMP(timezone=True), nullable=False)

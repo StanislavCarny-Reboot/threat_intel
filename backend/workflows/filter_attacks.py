@@ -25,9 +25,6 @@ from models.schemas import ArticleClassification
 from prompts.attack_classification import ATTACK_CLASSIFICATION_PROMPT
 import mlflow
 
-# mlflow.set_tracking_uri("http://ec2-51-20-89-171.eu-north-1.compute.amazonaws.com:5000")
-# mlflow.set_experiment("articles_labeling")
-# mlflow.autolog()
 
 load_dotenv()
 
