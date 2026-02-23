@@ -52,6 +52,9 @@ class ArticleClassification(BaseModel):
     digest: Literal["True", "False", "Not Sure"] = Field(
         description="Indicates if the article is classified as a 'Digest'"
     )
+    redirect: Literal["True", "False", "Not Sure"] = Field(
+        description="Indicates if the article is classified as a 'Redirect to another article'"
+    )
 
 
 class ArticleCluster(BaseModel):

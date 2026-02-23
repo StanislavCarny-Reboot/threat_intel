@@ -65,4 +65,5 @@ deployments:
       name: default-worker
     parameters:
       prompt_version: 1
+      limit: null
     enforce_parameter_schema: false

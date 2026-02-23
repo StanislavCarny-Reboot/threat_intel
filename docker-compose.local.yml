@@ -7,7 +7,7 @@ services:
     environment:
       POSTGRES_DB: prefect
       POSTGRES_USER: prefect
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_PASSWORD: prefect
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -22,8 +22,8 @@ services:
     restart: unless-stopped
     command: prefect server start --host 0.0.0.0
     environment:
-      PREFECT_SERVER_DATABASE_CONNECTION_URL: postgresql+asyncpg://prefect:${POSTGRES_PASSWORD}@postgres:5432/prefect
-      PREFECT_UI_API_URL: http://${SERVER_IP}/prefect/api
+      PREFECT_SERVER_DATABASE_CONNECTION_URL: postgresql+asyncpg://prefect:prefect@postgres:5432/prefect
+      PREFECT_UI_API_URL: http://localhost/prefect/api
       PREFECT_UI_SERVE_BASE: /prefect
     depends_on:
       postgres:
@@ -35,13 +35,15 @@ services:
       retries: 10
       start_period: 30s
 
-  # ── Prefect worker ──────────────────────────────────────────────────────────
+  # ── Prefect worker with hot-reload ──────────────────────────────────────────
   prefect-worker:
     build:
       context: ./backend
       dockerfile: Dockerfile
     restart: unless-stopped
     command: sh /app/start_worker.sh
+    volumes:
+      - ./backend:/app   # hot-reload
     environment:
       PREFECT_API_URL: http://prefect-server:4200/api
       MLFLOW_TRACKING_URI: http://mlflow:5000

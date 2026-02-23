@@ -4,16 +4,15 @@ from __future__ import annotations
 
 import json
 import os
-from datetime import datetime
-from pathlib import Path
 
-import pandas as pd
 from dotenv import load_dotenv
 from google import genai
 from google.genai import types
-from prefect import flow, get_run_logger, task
+from prefect import flow, get_run_logger, runtime, task
 
-from models.schemas import ClusteringResult
+from connectors import get_sync_db_session
+from models.entities import Article, ArticleClassificationLabel, Cluster, ClusterArticle
+from models.schemas import ArticleCluster, ClusteringResult
 from prompts.article_summary import SUMMARY_1, SUMMARY_2
 from prompts.clustering import CLUSTERING
 
@@ -28,33 +27,30 @@ FLOW_NAME = "cluster-articles"
 
 
 @task(name="load-articles-for-clustering", tags=["clustering-io"])
-def load_articles(input_file: Path | None = None) -> list[dict]:
-    """Load active campaign articles from the most recent classified Excel file."""
+def load_articles() -> list[dict]:
+    """Load active campaign articles from the database."""
     logger = get_run_logger()
 
-    if input_file is None:
-        data_dir = Path(__file__).parent.parent / "data"
-        excel_files = list(data_dir.glob("articles_classified_*.xlsx"))
-        if not excel_files:
-            logger.error("No classified article files found in data/")
-            return []
-        input_file = max(excel_files, key=lambda p: p.stat().st_mtime)
+    session = get_sync_db_session()
+    try:
+        rows = (
+            session.query(Article.url, Article.cleaned_text)
+            .join(
+                ArticleClassificationLabel,
+                Article.id == ArticleClassificationLabel.article_id,
+            )
+            .filter(ArticleClassificationLabel.active_campaign == "True")
+            .all()
+        )
+    finally:
+        session.close()
 
-    logger.info("Loading articles from %s", input_file)
-    df = pd.read_excel(input_file, sheet_name=0)
-
-    if "Active Campaign" in df.columns:
-        df = df[df["Active Campaign"] == "True"]
-        logger.info("Filtered to %d active campaign articles", len(df))
-
-    if df.empty:
-        logger.warning("No articles found for clustering")
+    if not rows:
+        logger.warning("No active campaign articles found in database")
         return []
 
-    return [
-        {"url": row.get("URL", ""), "cleaned_text": row.get("Text", "")}
-        for _, row in df.iterrows()
-    ]
+    logger.info("Loaded %d active campaign articles from database", len(rows))
+    return [{"url": row.url, "cleaned_text": row.cleaned_text or ""} for row in rows]
 
 
 @task(name="summarize-article", tags=["LLM_CALLS"], retries=3, retry_delay_seconds=2)
@@ -66,7 +62,7 @@ def summarize_article(
     system_instruction = SUMMARY_1 if prompt_version == 1 else SUMMARY_2
 
     response = client.models.generate_content(
-        model="gemini-3-pro-preview",
+        model="gemini-2.5-pro",
         contents=article_text,
         config=types.GenerateContentConfig(system_instruction=system_instruction),
     )
@@ -85,7 +81,7 @@ def cluster_articles(article_summaries: list[dict]) -> ClusteringResult:
     )
 
     response = client.models.generate_content(
-        model="gemini-3-pro-preview",
+        model="gemini-2.5-pro",
         contents=summaries_text,
         config=types.GenerateContentConfig(
             response_mime_type="application/json",
@@ -97,80 +93,56 @@ def cluster_articles(article_summaries: list[dict]) -> ClusteringResult:
     return ClusteringResult(**json.loads(response.text))
 
 
-@task(name="save-clustering-results", tags=["clustering-io"])
-def save_clustering_results(
-    clustering_result: ClusteringResult, output_file: Path | None = None
-) -> Path:
-    """Persist clustering results to an Excel file."""
+@task(name="save-cluster-to-db", tags=["clustering-io"])
+def save_cluster_to_db(cluster_data: ArticleCluster, run_id: str | None = None) -> int:
+    """Persist a single cluster and its articles to the database."""
     logger = get_run_logger()
 
-    output_data = [
-        {
-            "Campaign Name": cluster.campaign_name,
-            "Article URL": url,
-            "Reasoning": cluster.reasoning,
-            "Cluster Urls": "\n".join(cluster.article_urls),
-        }
-        for cluster in clustering_result.clusters
-        for url in cluster.article_urls
-    ]
-
-    output_df = pd.DataFrame(output_data)
-    logger.info(
-        "Created DataFrame with %d rows from %d clusters",
-        len(output_df),
-        len(clustering_result.clusters),
-    )
-
-    if output_file is None:
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        output_file = (
-            Path(__file__).parent.parent
-            / "outputs"
-            / f"articles_clustered_{timestamp}.xlsx"
+    session = get_sync_db_session()
+    try:
+        cluster = Cluster(
+            campaign_name=cluster_data.campaign_name,
+            reasoning=cluster_data.reasoning,
+            run_id=run_id,
         )
+        session.add(cluster)
+        session.flush()
 
-    output_file.parent.mkdir(parents=True, exist_ok=True)
+        for url in cluster_data.article_urls:
+            session.add(ClusterArticle(cluster_id=cluster.id, article_url=url))
 
-    with pd.ExcelWriter(output_file, engine="openpyxl") as writer:
-        output_df.to_excel(writer, index=False, sheet_name="Clustered Articles")
-        worksheet = writer.sheets["Clustered Articles"]
-        for idx, col in enumerate(output_df.columns):
-            max_length = min(
-                max(output_df[col].astype(str).apply(len).max(), len(str(col))) + 2,
-                100,
-            )
-            col_letter = (
-                chr(65 + idx)
-                if idx < 26
-                else chr(65 + idx // 26 - 1) + chr(65 + idx % 26)
-            )
-            worksheet.column_dimensions[col_letter].width = max_length
-
-    logger.info("Results saved to %s", output_file)
-    return output_file
+        session.commit()
+        logger.info(
+            "Saved cluster '%s' (%d articles)",
+            cluster_data.campaign_name,
+            len(cluster_data.article_urls),
+        )
+        return cluster.id
+    except Exception as e:
+        session.rollback()
+        logger.error("Failed to save cluster '%s': %s", cluster_data.campaign_name, e)
+        raise
+    finally:
+        session.close()
 
 
 # --- Prefect Flow ---
 
 
 @flow(name="cluster-articles", log_prints=True)
-def run(
-    input_file: str | None = None,
-    output_file: str | None = None,
-    prompt_version: int = 1,
-) -> None:
-    """Summarize and cluster active campaign articles from the classified Excel file.
+def run(prompt_version: int = 1, limit: int | None = None) -> None:
+    """Summarize and cluster active campaign articles from the database.
 
     Concurrency for LLM calls is controlled by Prefect concurrency limits on the
     'LLM_CALLS' tag (configure in the Prefect UI or via CLI).
     """
     logger = get_run_logger()
+    flow_run_id = str(runtime.flow_run.id) if runtime.flow_run.id else None
 
-    input_path = Path(input_file) if input_file else None
-    output_path = Path(output_file) if output_file else None
-
-    articles = load_articles(input_path)
+    articles = load_articles()
+    if limit:
+        articles = articles[:limit]
+        logger.info("Limited to %d articles", len(articles))
     if not articles:
         logger.warning("No articles to cluster; exiting")
         return
@@ -210,16 +182,15 @@ def run(
 
     clustering_result = cluster_articles(article_summaries)
 
-    save_clustering_results(clustering_result, output_path)
-
-    logger.info(
-        "Clustering complete: %d campaigns identified",
-        len(clustering_result.clusters),
-    )
     for cluster in clustering_result.clusters:
+        save_cluster_to_db.submit(cluster, flow_run_id)
         logger.info(
             "  - %s: %d articles", cluster.campaign_name, len(cluster.article_urls)
         )
+
+    logger.info(
+        "Clustering complete: %d campaigns identified", len(clustering_result.clusters)
+    )
 
 
 if __name__ == "__main__":

@@ -11,6 +11,9 @@ mlartifacts/
 
 .local.env
 
+# Traefik credentials
+traefik/dynamic.yml
+
 # Docker
 *.sql
 docker-compose.override.yml

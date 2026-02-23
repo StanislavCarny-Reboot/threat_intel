@@ -115,3 +115,20 @@ class SourceErrorLog(Base):
     process = Column(Text, nullable=True)
     detected_at = Column(TIMESTAMP(timezone=True), nullable=False)
     created_at = Column(TIMESTAMP(timezone=True), nullable=False)
+
+
+class Cluster(Base):
+    __tablename__ = "clusters"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    campaign_name = Column(String, nullable=False)
+    reasoning = Column(Text, nullable=True)
+    run_id = Column(String, nullable=True, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class ClusterArticle(Base):
+    __tablename__ = "cluster_articles"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    cluster_id = Column(Integer, nullable=False, index=True)
+    article_url = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
