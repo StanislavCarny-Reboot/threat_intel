@@ -64,8 +64,6 @@ services:
         --backend-store-uri /mlflow/mlruns
         --default-artifact-root /mlflow/artifacts
         --static-prefix /mlflow
-    environment:
-      MLFLOW_DISABLE_HOST_CHECK: "true"
     volumes:
       - mlflow_data:/mlflow
 
