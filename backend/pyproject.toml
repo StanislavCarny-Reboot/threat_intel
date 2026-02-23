@@ -18,7 +18,6 @@ dependencies = [
     "pandas>=2.3.3",
     "playwright>=1.57.0",
     "prefect>=3.6.17",
-    "psycopg2>=2.9.11",
     "psycopg2-binary>=2.9.11",
     "pydantic>=2.12.5",
     "python-dotenv>=1.2.1",

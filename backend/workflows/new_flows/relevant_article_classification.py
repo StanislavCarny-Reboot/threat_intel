@@ -99,27 +99,23 @@ def classify_article(article_row: dict) -> dict:
         raise
 
 
-@task(name="save-classifications-to-db", tags=["classification-db"])
-def save_classifications_to_db(results: list[dict]) -> int:
-    """Persist classification results to article_classification_labels."""
+@task(name="save-classification-to-db", tags=["classification-db"])
+def save_classification_to_db(result: dict) -> None:
+    """Persist a single classification result to article_classification_labels."""
     logger = get_run_logger()
     session = get_sync_db_session()
     try:
-        saved_count = 0
-        for result in results:
-            session.add(
-                ArticleClassificationLabel(
-                    article_id=result["article_id"],
-                    active_campaign=result["active_campaign"],
-                    cve=result["cve"],
-                    digest=result["digest"],
-                    label_source="llm",
-                )
+        session.add(
+            ArticleClassificationLabel(
+                article_id=result["article_id"],
+                active_campaign=result["active_campaign"],
+                cve=result["cve"],
+                digest=result["digest"],
+                label_source="llm",
             )
-            saved_count += 1
+        )
         session.commit()
-        logger.info("Saved %d classification records to database", saved_count)
-        return saved_count
+        logger.info("Saved classification for article %s", result["article_id"])
     except Exception:
         session.rollback()
         raise
@@ -127,29 +123,26 @@ def save_classifications_to_db(results: list[dict]) -> int:
         session.close()
 
 
-@task(name="save-errors-to-log", tags=["classification-db"])
-def save_errors_to_log(errors: list[dict]) -> None:
-    """Persist classification errors to source_error_log."""
+@task(name="save-error-to-log", tags=["classification-db"])
+def save_error_to_log(error: dict) -> None:
+    """Persist a single classification error to source_error_log."""
     logger = get_run_logger()
     session = get_sync_db_session()
     try:
         now = datetime.now(tz=timezone.utc)
-        session.add_all(
-            [
-                SourceErrorLog(
-                    source_uuid=str(e["article_id"]),
-                    source_url=e["url"],
-                    status_code="CLASSIFICATION_ERROR",
-                    error_message=e["error_message"],
-                    process=FLOW_NAME,
-                    detected_at=now,
-                    created_at=now,
-                )
-                for e in errors
-            ]
+        session.add(
+            SourceErrorLog(
+                source_uuid=str(error["article_id"]),
+                source_url=error["url"],
+                status_code="CLASSIFICATION_ERROR",
+                error_message=error["error_message"],
+                process=FLOW_NAME,
+                detected_at=now,
+                created_at=now,
+            )
         )
         session.commit()
-        logger.info("Logged %d classification errors to source_error_log", len(errors))
+        logger.info("Logged error for article %s", error["article_id"])
     except Exception:
         session.rollback()
         raise
@@ -176,37 +169,32 @@ def run() -> None:
 
     futures = [(article, classify_article.submit(article)) for article in articles]
 
-    results: list[dict] = []
-    errors: list[dict] = []
+    saved_count = 0
+    error_count = 0
     for article, future in futures:
         result = future.result(raise_on_failure=False)
         if isinstance(result, Exception):
             logger.error(
                 "Classification failed for article %s: %s", article["id"], result
             )
-            errors.append(
+            save_error_to_log(
                 {
                     "article_id": article["id"],
                     "url": article["url"],
                     "error_message": str(result),
                 }
             )
+            error_count += 1
         else:
-            results.append(result)
+            save_classification_to_db(result)
+            saved_count += 1
 
-    logger.info("Classification done: %d/%d succeeded", len(results), len(articles))
     logger.info(
-        "Summary: %d active campaigns, %d CVEs, %d digests",
-        sum(1 for r in results if r.get("active_campaign") == "True"),
-        sum(1 for r in results if r.get("cve") == "True"),
-        sum(1 for r in results if r.get("digest") == "True"),
+        "Classification done: %d/%d succeeded, %d errors",
+        saved_count,
+        len(articles),
+        error_count,
     )
-
-    if results:
-        save_classifications_to_db(results)
-
-    if errors:
-        save_errors_to_log(errors)
 
 
 if __name__ == "__main__":

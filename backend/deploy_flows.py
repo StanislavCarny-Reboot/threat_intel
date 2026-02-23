@@ -1,13 +1,16 @@
 """Deploy all Prefect flows for the threat-intel pipeline."""
 
+from pathlib import Path
+
+from workflows.new_flows.article_clustering import run as cluster_articles_run
 from workflows.new_flows.get_link_content import run as get_link_content_run
 from workflows.new_flows.parse_rss import run as parse_rss_run
 from workflows.new_flows.relevant_article_classification import (
     run as classify_articles_run,
 )
 
-BASE_PATH = "/Users/Stanislav_Carny/personal_project/new_threat_intel/backend"
-WORK_POOL = "default-agent-pool"
+BASE_PATH = str(Path(__file__).parent)
+WORK_POOL = "default-worker"
 
 if __name__ == "__main__":
     parse_rss_run.from_source(
@@ -44,4 +47,15 @@ if __name__ == "__main__":
         work_pool_name=WORK_POOL,
         tags=["classification", "threat-intel", "llm"],
         description="Classify articles as cyber attack campaigns, CVEs, or digest using LLM",
+    )
+
+    cluster_articles_run.from_source(
+        source=BASE_PATH,
+        entrypoint="workflows/new_flows/article_clustering.py:run",
+    ).deploy(
+        name="cluster-articles",
+        work_pool_name=WORK_POOL,
+        tags=["clustering", "threat-intel", "llm"],
+        description="Summarize and cluster active campaign articles into cyber attack campaigns",
+        parameters={"prompt_version": 1},
     )

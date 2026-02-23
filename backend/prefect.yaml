@@ -2,21 +2,14 @@
 name: threat-intel-backend
 prefect-version: 3.6.17
 
-# Pull step - how to get the code
+# Use local filesystem (code is mounted into the container at /app)
 pull:
-  - prefect.deployments.steps.git_clone:
-      repository: https://github.com/your-repo/threat-intel.git
-      branch: main
-      # Uncomment if using private repo
-      # access_token: "{{ prefect.blocks.secret.github-token }}"
+  - prefect.deployments.steps.set_working_directory:
+      directory: /app
 
-# Build step - any build commands needed
 build: null
-
-# Push step - where to store the deployment
 push: null
 
-# Deployments configuration
 deployments:
 
   - name: rss-url-collector
@@ -26,6 +19,8 @@ deployments:
       - url-collection
     description: "Collect RSS article URLs published in the last 24 hours"
     entrypoint: workflows/new_flows/parse_rss.py:run
+    work_pool:
+      name: default-worker
     # schedules:
     #   - cron: "0 * * * *"
     #     timezone: "UTC"
@@ -35,4 +30,39 @@ deployments:
       max_items_per_feed: 100
       limit_sources: 0
       dry_run: false
+    enforce_parameter_schema: false
+
+  - name: get-link-content
+    tags:
+      - scraping
+      - threat-intel
+      - content
+    description: "Scrape article body text for all new RSS items"
+    entrypoint: workflows/new_flows/get_link_content.py:run
+    work_pool:
+      name: default-worker
+    enforce_parameter_schema: false
+
+  - name: classify-articles
+    tags:
+      - classification
+      - threat-intel
+      - llm
+    description: "Classify articles as cyber attack campaigns, CVEs, or digest using LLM"
+    entrypoint: workflows/new_flows/relevant_article_classification.py:run
+    work_pool:
+      name: default-worker
+    enforce_parameter_schema: false
+
+  - name: cluster-articles
+    tags:
+      - clustering
+      - threat-intel
+      - llm
+    description: "Summarize and cluster active campaign articles into cyber attack campaigns"
+    entrypoint: workflows/new_flows/article_clustering.py:run
+    work_pool:
+      name: default-worker
+    parameters:
+      prompt_version: 1
     enforce_parameter_schema: false
