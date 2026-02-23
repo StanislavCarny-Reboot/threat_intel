@@ -17,4 +17,4 @@ RUN UV_PROJECT_ENVIRONMENT=/opt/venv uv sync --frozen --no-install-project
 ENV PATH="/opt/venv/bin:$PATH"
 
 WORKDIR /app
-# Code is mounted via volume at runtime (hot reload)
+COPY . .
