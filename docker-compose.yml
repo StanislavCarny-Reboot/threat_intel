@@ -64,6 +64,7 @@ services:
         --backend-store-uri /mlflow/mlruns
         --default-artifact-root /mlflow/artifacts
         --static-prefix /mlflow
+        --host-allowlist 13.49.80.71
     volumes:
       - mlflow_data:/mlflow
 
