@@ -46,7 +46,7 @@ services:
       PREFECT_API_URL: http://prefect-server:4200/api
       MLFLOW_TRACKING_URI: http://mlflow:5000
     env_file:
-      - ./backend/.env
+      - ./.env
     sysctls:
       - net.ipv6.conf.all.disable_ipv6=1
     depends_on:

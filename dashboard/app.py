@@ -11,7 +11,7 @@ load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), "../backend/.env
 
 QUERY_SOURCES = """
     SELECT s.source_name, count(*) AS article_count
-    FROM extracted_article_urls_stano u
+    FROM extracted_article_urls u
     LEFT JOIN sources_master_list s ON u.source_uuid = s.source_uuid
     GROUP BY s.source_uuid, s.source_name
     ORDER BY count(*) DESC

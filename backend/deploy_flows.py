@@ -2,10 +2,10 @@
 
 from pathlib import Path
 
-from workflows.new_flows.article_clustering import run as cluster_articles_run
-from workflows.new_flows.get_link_content import run as get_link_content_run
-from workflows.new_flows.parse_rss import run as parse_rss_run
-from workflows.new_flows.relevant_article_classification import (
+from workflows.article_clustering import run as cluster_articles_run
+from workflows.get_link_content import run as get_link_content_run
+from workflows.parse_rss import run as parse_rss_run
+from workflows.relevant_article_classification import (
     run as classify_articles_run,
 )
 
@@ -15,7 +15,7 @@ WORK_POOL = "default-worker"
 if __name__ == "__main__":
     parse_rss_run.from_source(
         source=BASE_PATH,
-        entrypoint="workflows/new_flows/parse_rss.py:run",
+        entrypoint="workflows/parse_rss.py:run",
     ).deploy(
         name="rss-url-collector",
         work_pool_name=WORK_POOL,
@@ -31,7 +31,7 @@ if __name__ == "__main__":
 
     get_link_content_run.from_source(
         source=BASE_PATH,
-        entrypoint="workflows/new_flows/get_link_content.py:run",
+        entrypoint="workflows/get_link_content.py:run",
     ).deploy(
         name="get-link-content",
         work_pool_name=WORK_POOL,
@@ -41,7 +41,7 @@ if __name__ == "__main__":
 
     classify_articles_run.from_source(
         source=BASE_PATH,
-        entrypoint="workflows/new_flows/relevant_article_classification.py:run",
+        entrypoint="workflows/relevant_article_classification.py:run",
     ).deploy(
         name="classify-articles",
         work_pool_name=WORK_POOL,
@@ -51,7 +51,7 @@ if __name__ == "__main__":
 
     cluster_articles_run.from_source(
         source=BASE_PATH,
-        entrypoint="workflows/new_flows/article_clustering.py:run",
+        entrypoint="workflows/article_clustering.py:run",
     ).deploy(
         name="cluster-articles",
         work_pool_name=WORK_POOL,
