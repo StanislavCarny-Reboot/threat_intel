@@ -12,7 +12,7 @@ from prefect import flow, get_run_logger, task
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert
 
-from connectors.database import get_sync_db_session
+from connectors.database import get_db_session
 from models.entities import Article, ExtractedArticleUrl, SourceErrorLog
 
 
@@ -44,7 +44,7 @@ def common_suffix_length(*lists) -> int:
 def fetch_new_rss_items(limit: int = 0) -> list[dict]:
     """Load extracted article URLs that have no matching Article record yet."""
     logger = get_run_logger()
-    session = get_sync_db_session()
+    session = get_db_session()
     try:
         extracted = list(session.execute(select(ExtractedArticleUrl)).scalars().all())
         existing_urls: set[str] = {
@@ -122,7 +122,7 @@ def scrape_source_urls(items: list[dict]) -> tuple[list[dict], list[dict]]:
 def save_articles(articles: list[dict]) -> int:
     """Upsert scraped articles into the database, ignoring duplicates."""
     logger = get_run_logger()
-    session = get_sync_db_session()
+    session = get_db_session()
     try:
         stmt = (
             insert(Article)
@@ -145,7 +145,7 @@ def save_articles(articles: list[dict]) -> int:
 def save_scraping_errors(errors: list[dict]) -> int:
     """Persist scraping failures to source_error_log with JSON error payload."""
     logger = get_run_logger()
-    session = get_sync_db_session()
+    session = get_db_session()
     try:
         now = datetime.now(tz=timezone.utc)
         records = [

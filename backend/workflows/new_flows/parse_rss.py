@@ -18,7 +18,7 @@ from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from tenacity import retry, stop_after_attempt, wait_fixed
 
-from connectors.database import get_sync_db_session
+from connectors.database import get_db_session
 from models.entities import ExtractedArticleUrl, SourceErrorLog, SourcesMasterList
 
 # --- Constants ---
@@ -382,7 +382,7 @@ def _update_source_status(
 @task(name="fetch-rss-sources", tags=["rss-db"])
 def fetch_rss_sources(limit: int = 0) -> list[SourcesMasterList]:
     """Load active RSS sources from the database."""
-    session = get_sync_db_session()
+    session = get_db_session()
     try:
         query = (
             select(SourcesMasterList)
@@ -415,7 +415,7 @@ def process_source(
     dry_run: bool = False,
 ) -> dict:
     """Fetch, parse, and store article URLs for a single RSS source."""
-    session = get_sync_db_session()
+    session = get_db_session()
     try:
         fetch_result = fetch_feed(source.source_url)
         if not fetch_result.ok:

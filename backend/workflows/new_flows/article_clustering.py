@@ -10,7 +10,7 @@ from google import genai
 from google.genai import types
 from prefect import flow, get_run_logger, runtime, task
 
-from connectors import get_sync_db_session
+from connectors import get_db_session
 from models.entities import Article, ArticleClassificationLabel, Cluster, ClusterArticle
 from models.schemas import ArticleCluster, ClusteringResult
 from prompts.article_summary import SUMMARY_1, SUMMARY_2
@@ -31,7 +31,7 @@ def load_articles() -> list[dict]:
     """Load active campaign articles from the database."""
     logger = get_run_logger()
 
-    session = get_sync_db_session()
+    session = get_db_session()
     try:
         rows = (
             session.query(Article.url, Article.cleaned_text)
@@ -98,7 +98,7 @@ def save_cluster_to_db(cluster_data: ArticleCluster, run_id: str | None = None) 
     """Persist a single cluster and its articles to the database."""
     logger = get_run_logger()
 
-    session = get_sync_db_session()
+    session = get_db_session()
     try:
         cluster = Cluster(
             campaign_name=cluster_data.campaign_name,

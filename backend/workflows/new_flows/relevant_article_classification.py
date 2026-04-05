@@ -14,7 +14,7 @@ from prefect import flow, get_run_logger, task
 from sqlalchemy import select
 from tenacity import retry, stop_after_attempt, wait_fixed
 
-from connectors.database import get_sync_db_session
+from connectors.database import get_db_session
 from models.entities import Article, ArticleClassificationLabel, SourceErrorLog
 from models.schemas import ArticleClassification
 from prompts.attack_classification import ATTACK_CLASSIFICATION_PROMPT
@@ -33,7 +33,7 @@ client = genai.Client(api_key=os.getenv("API_KEY"))
 def load_articles() -> list[dict]:
     """Load unclassified articles from the database."""
     logger = get_run_logger()
-    session = get_sync_db_session()
+    session = get_db_session()
     try:
         classified_ids = {
             row[0]
@@ -103,7 +103,7 @@ def classify_article(article_row: dict) -> dict:
 def save_classification_to_db(result: dict) -> None:
     """Persist a single classification result to article_classification_labels."""
     logger = get_run_logger()
-    session = get_sync_db_session()
+    session = get_db_session()
     try:
         session.add(
             ArticleClassificationLabel(
@@ -127,7 +127,7 @@ def save_classification_to_db(result: dict) -> None:
 def save_error_to_log(error: dict) -> None:
     """Persist a single classification error to source_error_log."""
     logger = get_run_logger()
-    session = get_sync_db_session()
+    session = get_db_session()
     try:
         now = datetime.now(tz=timezone.utc)
         session.add(
