@@ -89,18 +89,20 @@ def _do_scrape(url: str) -> str:
 
 @task(name="scrape-source-urls", tags=["scraping"])
 def scrape_source_urls(items: list[dict]) -> tuple[list[dict], list[dict]]:
-    """Scrape all URLs for one source sequentially with a 2 s fixed delay between requests."""
+    """Scrape all URLs for one source sequentially with a 5 s fixed delay between requests."""
     logger = get_run_logger()
     scraped: list[dict] = []
     errors: list[dict] = []
 
     for i, item in enumerate(items):
         if i > 0:
-            time.sleep(2)
+            time.sleep(5)
         url = item["url"]
         try:
             text = _do_scrape(url)
-            scraped.append({"source_name": item["source_name"], "text": text, "url": url})
+            scraped.append(
+                {"source_name": item["source_name"], "text": text, "url": url}
+            )
             logger.info("Scraped %s", url)
         except Exception as exc:
             logger.warning("Failed to scrape %s: %s", url, exc)
@@ -191,7 +193,7 @@ def run(limit: int = 0) -> None:
     for item in new_items:
         grouped[item["source_uuid"]].append(item)
 
-    futures = [scrape_source_urls.submit(items) for items in grouped.values()]
+    futures = [scrape_source_urls.submit(items) for items in grouped.values()]  # type: ignore[attr-defined]
     results = [f.result(raise_on_failure=False) for f in futures]
 
     all_scraped: list[dict] = []
@@ -229,4 +231,4 @@ def run(limit: int = 0) -> None:
 
 
 if __name__ == "__main__":
-    run.serve()
+    run.serve()  # type: ignore[attr-defined]
